@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreateFavouriteDto } from './dto/create-favourite.dto';
+import { UpdateFavouriteDto } from './dto/update-favourite.dto';
 
 @Injectable()
 export class FavouritesService {
@@ -40,30 +42,38 @@ export class FavouritesService {
         }
     ]
 
-    getAllFavourites() {
+    getAllFavourites(membership?: 'VIP' | 'FREE') {
+        if (membership) {
+            const membershipsArray = this.favourites.filter(favourite => favourite.membership === membership)
+            if (!membershipsArray.length) throw new NotFoundException("User Membership Not Found")
+            return membershipsArray
+        }
+
         return this.favourites
     }
 
     getFavourite(id: number) {
         const favourite = this.favourites.find(favourite => favourite.id === id)
 
+        if (!favourite) throw new NotFoundException("Favourite Not Found")
+
         return favourite
     }
 
-    createFavourite(userFavourites: { name: string, fmovie: string, factor: string, membership: "FREE" | "VIP" }) {
+    createFavourite(createFavouriteDto: CreateFavouriteDto) {
         const sortByHighestId = [...this.favourites].sort((a, b) => b.id - a.id)
         const newFavourite = {
             id: sortByHighestId[0].id + 1,
-            ...userFavourites
+            ...createFavouriteDto
         }
         this.favourites.push(newFavourite)
         return newFavourite
     }
 
-    updateFavourite(id: number, favouriteUpdate: { name?: string, fmovie?: string, factor?: string, membership?: "FREE" | "VIP" }) {
+    updateFavourite(id: number, updateFavouriteDto: UpdateFavouriteDto) {
         this.favourites = this.favourites.map(favourite => {
             if (favourite.id === id) {
-                return { ...favourite, ...favouriteUpdate }
+                return { ...favourite, ...updateFavouriteDto }
             }
             return favourite
         })
