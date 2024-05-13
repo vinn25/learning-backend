@@ -1,37 +1,49 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, Param, ParseIntPipe, Patch, Post, Query, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import mongoose from 'mongoose';
 
-@Controller('users')
+@Controller('newusers')
 export class UsersController {
     constructor(private readonly userService: UsersService) { }
 
     @Get()
-    getAllUsers(@Query('role') role?: 'INTERN' | 'ENGINEER' | 'ADMIN') {
-        return this.userService.getAllUsers(role)
+    getAllUsers() {
+        return this.userService.getAllUsers()
     }
 
     // ParseIntPipe, used for transforming data
     @Get(':id')
-    getUser(@Param('id', ParseIntPipe) id: number) {
-        return this.userService.getUser(id)
+    async getUser(@Param('id') id: string) {
+        const isValid = mongoose.Types.ObjectId.isValid(id);
+        if (!isValid) throw new HttpException('Favourite Not Found', 404);
+
+        const findUser = await this.userService.getUser(id);
+        if (!findUser) throw new HttpException('Favourite Not Found', 404);
+        return findUser;
     }
 
     // ValidationPipe, is used for validating the datas that are coming in
     // by using the validations from class-validator in dto files
     @Post()
     createUser(@Body(ValidationPipe) createUserDto: CreateUserDto) {
+        console.log(createUserDto)
         return this.userService.createUser(createUserDto)
     }
 
     @Patch(':id')
-    updateUser(@Param('id', ParseIntPipe) id: number, @Body(ValidationPipe) updateUserDto: UpdateUserDto) {
-        return this.userService.updateUser(id, updateUserDto)
+    updateUser(@Param('id') id: string, @Body(ValidationPipe) updateUserDto: UpdateUserDto) {
+        const isValid = mongoose.Types.ObjectId.isValid(id);
+        if (!isValid) throw new HttpException('Favourite Not Found', 404);
+
+        const update = this.userService.updateUser(id, updateUserDto);
+        return update;
     }
 
     @Delete(':id')
-    deleteUser(@Param('id', ParseIntPipe) id: number) {
-        return this.userService.deleteUser(id)
+    async deleteUser(@Param('id') id: string) {
+        const delFav = await this.userService.deleteUser(id);
+        return delFav;
     }
 }

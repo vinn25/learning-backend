@@ -1,90 +1,46 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateFavouriteDto } from './dto/create-favourite.dto';
 import { UpdateFavouriteDto } from './dto/update-favourite.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { favourite } from './schema/favourites.schema';
+import { Model } from 'mongoose';
+import { Movie } from 'src/movies/schema/movie.schema';
 
 @Injectable()
 export class FavouritesService {
-    private favourites = [
-        {
-            "id": 1,
-            "name": "Justine Zhang",
-            "fmovie": "Crimson Cascade",
-            "factor": "Tom Cruise",
-            "membership": "FREE"
-        },
-        {
-            "id": 2,
-            "name": "Mohammed Andersen",
-            "fmovie": "Echoes of Eternity",
-            "factor": "James Cameron",
-            "membership": "VIP"
-        },
-        {
-            "id": 3,
-            "name": "Karin Stevens",
-            "fmovie": "Titan's Tundra",
-            "factor": "Jason Statham",
-            "membership": "VIP"
-        },
-        {
-            "id": 4,
-            "name": "Ora Collins",
-            "fmovie": "Midnight Mirage",
-            "factor": "Robin Williams",
-            "membership": "FREE"
-        },
-        {
-            "id": 5,
-            "name": "Laurel Anthony",
-            "fmovie": "Shadows in the Wind",
-            "factor": "Bruce Willis",
-            "membership": "FREE"
-        }
-    ]
+    constructor(@InjectModel(favourite.name) private favouriteModel: Model<favourite>,
+        @InjectModel(Movie.name) private movieModel: Model<Movie>) { }
 
-    getAllFavourites(membership?: 'VIP' | 'FREE') {
-        if (membership) {
-            const membershipsArray = this.favourites.filter(favourite => favourite.membership === membership)
-            if (!membershipsArray.length) throw new NotFoundException("User Membership Not Found")
-            return membershipsArray
+    getAllFavourites() {
+        return this.favouriteModel.find().populate('movie');
+    }
+
+    getFavourite(id: string) {
+        return this.favouriteModel.findById(id).populate('movie');
+    }
+
+    async createFavourite({ movie, ...createFavouriteDto }: CreateFavouriteDto) {
+        if (movie) {
+            const newMovie = new this.movieModel(movie);
+            const createNewMovie = await newMovie.save();
+            const newFavourite = new this.favouriteModel({
+                ...createFavouriteDto,
+                movie: createNewMovie._id,
+            });
+            return (await newFavourite.save()).populate('movie');
         }
 
-        return this.favourites
+        const newFavourite = new this.favouriteModel(createFavouriteDto);
+        return newFavourite.save();
     }
 
-    getFavourite(id: number) {
-        const favourite = this.favourites.find(favourite => favourite.id === id)
-
-        if (!favourite) throw new NotFoundException("Favourite Not Found")
-
-        return favourite
+    updateFavourite(id: string, updateFavouriteDto: UpdateFavouriteDto) {
+        const updated = this.favouriteModel.findByIdAndUpdate(id, updateFavouriteDto);
+        return updated;
     }
 
-    createFavourite(createFavouriteDto: CreateFavouriteDto) {
-        const sortByHighestId = [...this.favourites].sort((a, b) => b.id - a.id)
-        const newFavourite = {
-            id: sortByHighestId[0].id + 1,
-            ...createFavouriteDto
-        }
-        this.favourites.push(newFavourite)
-        return newFavourite
-    }
-
-    updateFavourite(id: number, updateFavouriteDto: UpdateFavouriteDto) {
-        this.favourites = this.favourites.map(favourite => {
-            if (favourite.id === id) {
-                return { ...favourite, ...updateFavouriteDto }
-            }
-            return favourite
-        })
-        return this.getFavourite(id)
-    }
-
-    deleteFavourite(id: number) {
-        const removedFavourite = this.getFavourite(id)
-
-        this.favourites = this.favourites.filter(favourite => favourite.id !== id)
-
-        return removedFavourite
+    deleteFavourite(id: string) {
+        const delFav = this.favouriteModel.findByIdAndDelete(id);
+        return delFav;
     }
 }

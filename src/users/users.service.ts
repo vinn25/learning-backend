@@ -1,87 +1,49 @@
 import { Body, Injectable, NotFoundException, Param, Query } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { NewUser } from './schema/user.schema';
+import { favourite } from 'src/favourites/schema/favourites.schema';
 
 @Injectable()
 export class UsersService {
-    private users = [
-        {
-            "id": 1,
-            "name": "Leanne Graham",
-            "email": "Sincere@april.biz",
-            "role": "INTERN"
-        },
-        {
-            "id": 2,
-            "name": "Ervin Howell",
-            "email": "Shanna@melissa.tv",
-            "role": "INTERN"
-        },
-        {
-            "id": 3,
-            "name": "Patricia Lebsack",
-            "email": "Julianne.OConner@kory.org",
-            "role": "ENGINEER"
-        },
-        {
-            "id": 4,
-            "name": "Clementine Bauch",
-            "email": "Nathan@yesenia.net",
-            "role": "ENGINEER"
-        },
-        {
-            "id": 5,
-            "name": "Chelsey Dietrich",
-            "email": "Lucio_Hettinger@annie.ca",
-            "role": "ADMIN"
-        }
-    ]
+    constructor(@InjectModel(NewUser.name) private userModel: Model<NewUser>,
+        @InjectModel(favourite.name) private favouriteModel: Model<favourite>) { }
 
     // Get all the users
-    getAllUsers(role?: 'INTERN' | 'ENGINEER' | 'ADMIN') {
-        if (role) {
-            const rolesArray = this.users.filter(user => user.role === role)
-            if (rolesArray.length === 0) throw new NotFoundException("User role not found")
-            return rolesArray
-        }
-        return this.users
+    getAllUsers() {
+        return this.userModel.find().populate('favourite');
     }
 
     // Get a user specified by id
-    getUser(id: number) {
-        const user = this.users.find(user => user.id === id)
-
-        if (!user) throw new NotFoundException("User not found")
-
-        return user
+    getUser(id: string) {
+        return this.userModel.findById(id).populate('favourite');
     }
 
     // Create a new user
-    createUser(createUserDto: CreateUserDto) {
-        const usersByHighestId = [...this.users].sort((a, b) => b.id = a.id)
-        const newUser = {
-            id: usersByHighestId[0].id + 1,
-            ...createUserDto
+    async createUser({ favourite, ...createUserDto }: CreateUserDto) {
+        if (favourite) {
+            const newFavourite = new this.favouriteModel(favourite);
+            const createNewFavourite = await newFavourite.save();
+            const newUser = new this.userModel({
+                ...createUserDto,
+                favourite: createNewFavourite._id,
+            });
+            return (await newUser.save()).populate('favourite');
         }
-        this.users.push(newUser)
-        return newUser
+
+        const newUser = new this.userModel(createUserDto);
+        return newUser.save();
     }
 
-    updateUser(id: number, updateUserDto: UpdateUserDto) {
-        this.users = this.users.map(user => {
-            if (user.id === id) {
-                return { ...user, ...updateUserDto }
-            }
-            return user
-        })
-        return this.getUser(id)
+    updateUser(id: string, updateUserDto: UpdateUserDto) {
+        const update = this.userModel.findByIdAndUpdate(id, updateUserDto);
+        return update;
     }
 
-    deleteUser(id: number) {
-        const removedUser = this.getUser(id)
-
-        this.users = this.users.filter(user => user.id !== id)
-
-        return this.users
+    deleteUser(id: string) {
+        const del = this.userModel.findByIdAndDelete(id);
+        return del;
     }
 }
