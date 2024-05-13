@@ -40,7 +40,7 @@ export class FavouritesController {
 
     @Delete(':id')
     async deleteFavourite(@Param('id') id: string) {
-        const delFav = await this.favouriteService.deleteFavourite(id)
-        return delFav;
+        const del = await this.favouriteService.deleteFavourite(id)
+        return del;
     }
 }
