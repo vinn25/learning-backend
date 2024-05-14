@@ -1,14 +1,21 @@
-import { Body, Controller, Delete, Get, HttpException, Param, ParseIntPipe, Patch, Post, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, Param, ParseIntPipe, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { FavouritesService } from './favourites.service';
 import { CreateFavouriteDto } from './dto/create-favourite.dto';
 import { UpdateFavouriteDto } from './dto/update-favourite.dto';
 import mongoose from 'mongoose';
+import { AuthFavouritesGuards } from './guard/auth.favourites.guard';
+import { Roles } from './decorators/roles.decorator';
+import { UserRole } from './enum/roles.enum';
+import { RolesFavouritesGuard } from './guard/roles.favourites.guard';
 
 @Controller('favourites')
 export class FavouritesController {
     constructor(private favouriteService: FavouritesService) { }
 
     @Get()
+    @Roles([UserRole.Free, UserRole.VIP])
+    // @Roles(['FREE', 'VIP'])
+    @UseGuards(AuthFavouritesGuards, RolesFavouritesGuard)
     getAllFavourites() {
         return this.favouriteService.getAllFavourites();
     }

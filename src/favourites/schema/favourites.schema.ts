@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import mongoose, { Types } from "mongoose";
 import { Movie } from "src/movies/schema/movie.schema";
+import { UserRole } from "../enum/roles.enum";
 
 export type FavouriteDocument = favourite & Document;
 
@@ -12,8 +13,10 @@ export class favourite {
     @Prop()
     factor: string;
 
+    // [UserRole.Free, UserRole.VIP]
+    // ['FREE', 'VIP']
     @Prop()
-    membership: 'FREE' | 'VIP';
+    membership: [UserRole.Free, UserRole.VIP];
 
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Movie' })
     movie: Movie;
